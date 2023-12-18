@@ -26,5 +26,7 @@ int main()
         printf("Valor lido: %d\n", valor_lido);
     }
 
+    fclose(arquivo);
+
     return 0;
 }
