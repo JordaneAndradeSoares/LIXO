@@ -20,7 +20,7 @@ pontos = 0
 fonte = pygame.font.SysFont("Arial", 40, True, True)
 
 tela = pygame.display.set_mode((largura, altura))
-pygame.display.set_caption("JOGO DE CARTAS")
+pygame.display.set_caption("JOGO")
 
 fps = pygame.time.Clock()
 
