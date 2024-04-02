@@ -9,10 +9,10 @@ VERMELHO = (255, 0, 0)
 LARGURA, ALTURA = 800, 400
 
 tamanho = 50
-salto_jogador = -10  # Ajuste a altura do pulo aqui
+salto_jogador = -10
 pulando = False
-contador_salto = 10  # Ajuste a duração do pulo aqui
-fps = 30
+contador_salto = 10
+fps = 60
 jogador_x = 10
 jogador_y = ALTURA - tamanho
 reserva = jogador_y
@@ -87,6 +87,10 @@ class Rex2(pygame.sprite.Sprite):
 
 
 class Pulando(pygame.sprite.Sprite):
+    def som_do_pulo():
+        som_salto = pygame.mixer.Sound("C:\\Users\\Jordane A. Soares\\Pictures\\jogos\\codigos\\dino melhor\\smw_jump.wav")
+        som_salto.play()
+
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.sprites = []
@@ -97,6 +101,7 @@ class Pulando(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect()
         self.rect.topleft = 100, 100
+
 
     def update(self):
         self.atual += 0.5
@@ -127,20 +132,25 @@ while True:
             sys.exit()
        
         elif evento.type == pygame.KEYDOWN:
-            if evento.key == pygame.K_SPACE and not pulando:
+            if evento.key == pygame.K_SPACE and not pulando and jogando:
                 pulando = True 
-                contador_salto = 10  # Reinicia o contador de pulo
-
+                contador_salto = 10 
+                Pulando.som_do_pulo()
+                
             elif evento.key == pygame.K_k and not jogando:
                 jogando = True
 
     if jogando:
+        if obstaculo_x == jogador_x and obstaculo_y == jogador_y:
+            jogando = False
+            contador_derrota = True
+
         limite_obstaculo_x = -tamanho
         andando.update() 
         andando_inimigo.update()
 
-        if pulando:
-            if contador_salto >= -10:  # Ajusta o limite do pulo
+        if pulando:    
+            if contador_salto >= -10: 
                 direcao = 1
                 if contador_salto < 0:
                     direcao = -1
@@ -151,16 +161,14 @@ while True:
         
         if obstaculo_x <= limite_obstaculo_x:
             obstaculo_x = LARGURA
-            pontos += 1
+            
+            if pontos < 999999:
+                pontos += 1
         
         else:
             obstaculo_x -= velocidade_do_obstaculo
             tela.blit(rex_inimigo.image, (obstaculo_x, obstaculo_y))
             tela.blit(rex.image, (jogador_x, jogador_y))
-
-        if obstaculo_x == jogador_x and obstaculo_y == jogador_y:
-            jogando = False
-            contador_derrota = True
 
         mensagem = f"Pontos: {pontos}"
         texto = fonte.render(mensagem, True, PRETO)
