@@ -91,18 +91,6 @@ class Pulando(pygame.sprite.Sprite):
         som_salto = pygame.mixer.Sound("C:\\Users\\Jordane A. Soares\\Pictures\\jogos\\codigos\\dino melhor\\smw_jump.wav")
         som_salto.play()
 
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.sprites = []
-        self.sprites.append(pygame.image.load("C:\\Users\\Jordane A. Soares\\Pictures\\jogos\\codigos\\dino melhor\\1.png"))
-        self.atual = 0
-        self.image = self.sprites[self.atual]
-        self.image = pygame.transform.scale(self.image, (tamanho, tamanho))
-
-        self.rect = self.image.get_rect()
-        self.rect.topleft = 100, 100
-
-
     def update(self):
         self.atual += 0.5
         if self.atual >= len(self.sprites):
@@ -137,8 +125,10 @@ while True:
                 contador_salto = 10 
                 Pulando.som_do_pulo()
                 
-            elif evento.key == pygame.K_k and not jogando:
+            if evento.key == pygame.K_k and not jogando:
                 jogando = True
+                pontos = 0
+                obstaculo_x = LARGURA + tamanho
 
     if jogando:
         if obstaculo_x == jogador_x and obstaculo_y == jogador_y:
@@ -160,11 +150,12 @@ while True:
                 pulando = False
         
         if obstaculo_x <= limite_obstaculo_x:
-            obstaculo_x = LARGURA
-            
-            if pontos < 999999:
+            if pontos >= 999999:
+                pontos = 0
+            else:
+                obstaculo_x = LARGURA
                 pontos += 1
-        
+            
         else:
             obstaculo_x -= velocidade_do_obstaculo
             tela.blit(rex_inimigo.image, (obstaculo_x, obstaculo_y))
