@@ -1,18 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
-int main()
-{
-    int pimbamento = 1000;
-    clock_t pimba_1, pimba_2;
+int variavel_global = 1;
 
-    pimba_1 = clock();
-    pimbada(pimbamento);
-    pimba_2 = clock();
+void print(int i, int a){
 
-    double duracao = ((double)(pimba_2 - pimba_1)) / CLOCKS_PER_SEC;
-    printf("Tempo: %lf\n", duracao);
-    printf("Pimba 1: %d\n", pimba_1);
-    printf("Pimba 2: %d", pimba_2);
+    if (i == 1){
+        printf("Tabuada do 10 de 1 ao 10:\n\n");
+    }
+
+    printf("%d x %02d = %03d\n", a, i++, a*i);
+    variavel_global = i;
+}
+
+int main(int i, int a){
+    a = 10;
+    i = variavel_global;
+
+    if (i > 10){
+        return 0;
+
+    } else {
+        print(i, a);
+        main(i, a);
+    }
 }
