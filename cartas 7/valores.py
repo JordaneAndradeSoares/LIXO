@@ -1,0 +1,28 @@
+# Limites
+MAX_HAND = 7
+MAX_MANA = 10
+MAX_DECK = 40
+MAX_COPIES = 3
+
+# -------- CONFIGURAÇÃO --------
+WIDTH, HEIGHT = 1200, 750
+FPS = 30
+FONT_NAME = "freesansbold.ttf"
+
+# Cores
+WHITE = (245, 245, 245)
+BLACK = (20, 20, 20)
+GREY = (200, 200, 200)
+LIGHT_GREY = (230, 230, 230)
+RED = (200, 60, 60)
+GREEN = (80, 180, 80)
+BLUE = (70, 130, 200)
+YELLOW = (230, 200, 60)
+DARK = (40, 40, 40)
+CARD_BG = (250, 250, 250)
+
+# BOARD (slots fixos)
+BOARD_SLOTS = 6
+BOARD_LEFT = 220
+BOARD_RIGHT_PADDING = 40
+BOARD_HEIGHT = 160
