@@ -1,8 +1,10 @@
+#TODO: conferir os efeitos
+
 import pygame
 import random
 import sys
 
-# importando módulos auxiliares
+# importando arquivos auxiliares
 import evolucoes
 import valores
 import cartas
@@ -45,7 +47,7 @@ class Game:
             p.deck = p.deck[:]
             random.shuffle(p.deck)
             p.draw(3)
-            p.max_mana = 0
+            p.max_mana = 2 # começando com 3 de mana
             p.mana = 0
             p.life = 20
         self.current = self.player1
@@ -58,7 +60,7 @@ class Game:
 
     def start_turn(self, player):
         player.max_mana = min(cartas.valores.MAX_MANA, player.max_mana + 1)
-        player.mana = player.max_mana
+        player.mana = player.max_mana 
         player.draw(1)
         for c in player.field:
             c.summoned_turn = False
@@ -317,7 +319,8 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        if not self.winner:
+                        # Bloqueia turno se tiver descarte pendente
+                        if not self.winner and not self.pending_card:
                             self.end_turn()
                     if event.key == pygame.K_r:
                         self.init_game()

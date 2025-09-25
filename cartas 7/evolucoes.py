@@ -133,12 +133,36 @@ def get_summon_cost(creature: str, used_material: bool = False) -> int:
     return max(1, cost - 1) if used_material else cost
 
 def evolve_cost_direct(base: str, target: str) -> int:
-    """Custo de evoluir diretamente base -> target (desconto -1 se for filho direto)"""
-    b = _resolve(base)
-    t = _resolve(target)
-    if b and t and t in EVOLUTIONS.get(b, []):
-        return get_summon_cost(t, used_material=True)
-    return get_summon_cost(target, used_material=False)
+    """
+    Custo de evoluir diretamente base -> target.
+    Aplica desconto (used_material=True) se target for filho direto de base.
+    Esta versão é robusta a diferenças de case/acentos/espacos.
+    """
+    b_real = _resolve(base)
+    t_real = _resolve(target)
+
+    # debug útil (remove ou comente depois)
+    # print(f"[DBG] base='{base}' -> resolved='{b_real}'; target='{target}' -> resolved='{t_real}'")
+
+    # se não resolveu um dos nomes, tenta fallback e retorna custo normal do target
+    if b_real is None or t_real is None:
+        # se target resolvido, devolve custo normal (sem desconto)
+        if t_real:
+            return get_summon_cost(t_real, used_material=False)
+        # se target nem resolvido, erro claro
+        raise ValueError(f"Nome inválido em evolve_cost_direct: base='{base}' target='{target}'")
+
+    # pega filhos do pai e normaliza para comparação segura
+    children = EVOLUTIONS.get(b_real, [])
+    children_norm = {_normalize(ch) for ch in children}
+    t_norm = _normalize(t_real)
+
+    if t_norm in children_norm:
+        # filho direto -> aplica desconto
+        return get_summon_cost(t_real, used_material=True)
+
+    # não é filho direto -> custo normal
+    return get_summon_cost(t_real, used_material=False)
 
 def evolve_cost_any(base: str, target: str) -> int:
     """Custo de evoluir base em qualquer descendente target (desconto -1)"""

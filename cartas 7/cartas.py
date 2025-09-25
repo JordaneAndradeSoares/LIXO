@@ -3,9 +3,7 @@ import random
 # importando arquivos auxiliares
 import valores 
 import efeitos
-
-# importando o arquivo evolucoes inteiro
-from evolucoes import *
+import evolucoes
 
 # -------- CLASSES DO JOGO --------
 class Card:
@@ -101,39 +99,42 @@ class Player:
         if card_index < 0 or card_index >= len(self.hand):
             return None
         card = self.hand[card_index]
-        if card.cost > self.mana:
-            return None
 
-        # --- evolução ---
-        evolved = False
+        # --- verificar se é evolução ---
         for i, field_card in enumerate(self.field):
-            evolutions = get_evolution(field_card.name)
-            if card.name.strip().lower() in [e.lower().strip() for e in evolutions]:
+            evolutions = evolucoes.get_evolution(field_card.name)
+            # comparação robusta
+            if evolucoes._normalize(card.name) in {evolucoes._normalize(e) for e in evolutions}:
+                cost = evolucoes.evolve_cost_direct(field_card.name, card.name)
+                if cost > self.mana:
+                    return None
+
+                # ativa on_death do substituído
                 if getattr(field_card, "on_death", None):
                     field_card.trigger_on_death(self.game_ref, self)
+
                 self.cemetery.add(field_card)
                 self.field[i] = card
                 self.hand.pop(card_index)
-                self.mana -= card.cost
+                self.mana -= cost
                 card.summoned_turn = True
                 card.has_attacked = False
                 if card.effect:
                     card.trigger_effect(self.game_ref, self)
-                evolved = True
-                break
+                return card
 
-        if evolved:
-            return card
+        # --- se não for evolução, então é invocação normal ---
+        if len(self.field) >= valores.BOARD_SLOTS:  # campo cheio → não pode invocar criatura nova
+            return None
 
-        # --- jogando normalmente ---
-        if len(self.field) >= valores.BOARD_SLOTS:  # campo cheio
+        if card.cost > self.mana:
             return None
 
         self.mana -= card.cost
         self.field.append(card)
+        self.hand.pop(card_index)
         card.summoned_turn = True
         card.has_attacked = False
-        self.hand.pop(card_index)
         if card.effect:
             card.trigger_effect(self.game_ref, self)
         return card
@@ -150,14 +151,14 @@ class Player:
                 self.cemetery.add(c)
         self.field = survivors
 
-    def activate_card_effect(self, card_index):
-        if 0 <= card_index < len(self.field):
-            card = self.field[card_index]
-            if card.activable and self.mana >= card.cost:
-                self.mana -= card.cost
-                card.trigger_activable(self.game_ref, self)
-                return True
-        return False
+def activate_card_effect(self, card_index):
+    if 0 <= card_index < len(self.field):
+        card = self.field[card_index]
+        if card.activable and self.mana >= card.cost:
+            self.mana -= card.cost
+            card.trigger_activable(self.game_ref, self)
+            return True
+    return False
 
 # -------- UTILITÁRIOS --------
 def make_sample_deck():
