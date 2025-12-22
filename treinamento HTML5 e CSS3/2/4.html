@@ -17,12 +17,18 @@
             max-width: 800px;
         }
 
-        img {
-            width: 100%;
+       img, video {
+            width: 100%; /* Garante que fiquem dentro do 'main' */
+            height: auto;
+            border-radius: 8px;
+        }
+
+        p {
+            text-shadow: 2px 2px 2px orangered;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
     </style>
-</head>
-<body>
+<body style="background-color: greenyellow;">
     <p style="color: var(--cor_1);">TEXTO: <a href="1.html">pagina 1</a></p>
     <p style="color: var(--cor_2);">TEXTO: <a href="2.html">pagina 2</a></p>
     <p style="color: var(--cor_3);">TEXTO: <a href="3.html">pagina 3</a></p>
@@ -34,6 +40,7 @@
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptas molestias omnis error dolorum asperiores eaque reprehenderit aperiam aut natus cupiditate mollitia animi architecto adipisci et, fugit qui consectetur deleniti iure.
     </p>
 
+    <video src="video.mp4" autoplay loop muted controls></video>
     <img src="carro.jpg" alt="image/jpg">
 </body>
 </html>
