@@ -1,103 +1,112 @@
 import cv2
 import numpy as np
 import pygame
-from scipy.optimize import linear_sum_assignment
+import threading
+from queue import Queue
+import os
 
+# carregar e preparar imagem (cortar quadrado central e redimensionar)
 def carregar_e_preparar(caminho, tamanho):
-    imagem = cv2.imread(caminho)
-    
-    if imagem is None:
-        raise ValueError(f"Não foi possível carregar a imagem: {caminho}")
+    img = cv2.imread(caminho)
 
-    h, w = imagem.shape[:2]
+    if img is None:
+        raise ValueError(f"Erro ao carregar: {caminho}")
 
-    menor = min(h, w)
-    inicio_x = (w - menor) // 2
-    inicio_y = (h - menor) // 2
-    imagem = imagem[inicio_y:inicio_y+menor, inicio_x:inicio_x+menor]
+    h, w = img.shape[:2]
+    m = min(h, w)
 
-    # Aumentando o tamanho da imagem
-    imagem = cv2.resize(imagem, (tamanho, tamanho))
-    return imagem
+    x = (w - m) // 2
+    y = (h - m) // 2
 
-def construir_matriz_custo(A, B, peso_proximidade=1.0):
-    n = A.shape[0]
+    img = img[y:y+m, x:x+m]
+    img = cv2.resize(img, (tamanho, tamanho))
 
-    A_flat = A.reshape(-1, 3)
-    B_flat = B.reshape(-1, 3)
+    return img
 
-    custo_cor = np.linalg.norm(A_flat[:, None] - B_flat[None, :], axis=2)
+# transformar pixels
+def gerar_transformacoes(origem, alvo, fila):
+    A = origem.reshape(-1, 3)
+    B = alvo.reshape(-1, 3)
 
-    coords = np.indices((n, n)).reshape(2, -1).T
-    custo_espacial = np.linalg.norm(coords[:, None] - coords[None, :], axis=2)
+    usados = set()
 
-    return custo_cor + peso_proximidade * custo_espacial
+    for i in range(len(A)):
+        dist = np.linalg.norm(B - A[i], axis=1)
 
-def transformar(caminho_origem, caminho_alvo, tamanho=32, proximidade=0.5):
-    origem = carregar_e_preparar(caminho_origem, tamanho)
-    alvo = carregar_e_preparar(caminho_alvo, tamanho)
+        # evita repetir pixels (melhora visual)
+        for u in usados:
+            dist[u] = 1e9
 
-    custo = construir_matriz_custo(origem, alvo, proximidade)
+        idx = np.argmin(dist)
+        usados.add(idx)
 
-    linhas, colunas = linear_sum_assignment(custo)
+        fila.put((i, idx))
 
-    # A imagem resultante é reconstruída com base na correspondência de pixels
-    alvo_flat = alvo.reshape(-1, 3)
-    resultado = alvo_flat[colunas].reshape(tamanho, tamanho, 3)
+    fila.put(None)  # sinal de fim
 
-    return origem, alvo, resultado, linhas, colunas
+# função principal
+origem_path = input("Imagem que será copiada (com extensão): ")  # imagem que será usada como alvo
+alvo_path = input("Imagem que será transformada (com extensão): ")  # imagem que será transformada para parecer com a origem
+tamanho = int(input("Tamanho (recomendo 128 no máximo): "))
 
-def salvar_resultado(imagem, caminho="saida.png"):
-    cv2.imwrite(caminho, imagem)
+proximidade = 2  # quanto a imagem que será transformada deve se aproximar da imagem que quer copiar
+zoom = 2  # tamanho do zoom
 
-# Variaveis
-caminho_origem = input("Digite o nome da imagem que quer recriar com sua extensão: ")
-caminho_alvo = input("Digite o nome da imagem que quer usar como base com sua extensão: ")
+origem = carregar_e_preparar(origem_path, tamanho)
+alvo = carregar_e_preparar(alvo_path, tamanho)
 
-# Aumentando o tamanho da imagem e da tela
-tamanho = int(input("Digite o tamanho (recomendo 64 no maximo): "))  # Tamanho da imagem
-zoom_da_imagem = 4 # Zoom para a imagem criada ficar maior na tela do pygame
-proximidade = 0.2
-
-# Inicializa pygame
+# pygame
 pygame.init()
+screen = pygame.display.set_mode((tamanho * zoom, tamanho * zoom))  # tela do tamanho da imagem vezes o zoom
+pygame.display.set_caption("Transformação em tempo real")
 
-# Cria uma janela maior do pygame
-screen = pygame.display.set_mode((tamanho * zoom_da_imagem, tamanho * zoom_da_imagem))  # Tamanho da janela
-pygame.display.set_caption('Imagem')
-
-# Exibição em tempo real durante o processamento
-origem, alvo, resultado, linhas, colunas = transformar(caminho_origem, caminho_alvo, tamanho, proximidade)
-
-# Cria um array vazio para armazenar a imagem parcial
 imagem_parcial = np.zeros((tamanho, tamanho, 3), dtype=np.uint8)
 
-# Processo de transformação, passo a passo
-for i in range(1, len(linhas) + 1):
-    # A cada iteração, preenche a imagem parcial com os pixels correspondentes
-    imagem_parcial_flat = imagem_parcial.reshape(-1, 3)
-    imagem_parcial_flat[:i] = alvo.reshape(-1, 3)[colunas[:i]]
-    imagem_parcial = imagem_parcial_flat.reshape(tamanho, tamanho, 3)
+fila = Queue()
 
-    # Converte a imagem para o formato do pygame (Surface)
-    imagem_parcial_rgb = cv2.cvtColor(imagem_parcial, cv2.COLOR_BGR2RGB)
-    imagem_parcial_surface = pygame.surfarray.make_surface(imagem_parcial_rgb)
+# thread de cálculo
+thread = threading.Thread(target=gerar_transformacoes, args=(origem, alvo, fila))
+thread.start()
 
-    # Aplique o zoom na imagem gerada
-    imagem_com_zoom = cv2.resize(imagem_parcial, (tamanho * zoom_da_imagem, tamanho * zoom_da_imagem))
+frames = []
 
-   # Converte a imagem para o formato do pygame (Surface)
-    imagem_com_zoom_rgb = cv2.cvtColor(imagem_com_zoom, cv2.COLOR_BGR2RGB)
-    imagem_com_zoom_surface = pygame.surfarray.make_surface(imagem_com_zoom_rgb)
+running = True
+finalizado = False
 
-    # Atualiza a tela do pygame com a imagem modificada
-    screen.blit(imagem_com_zoom_surface, (0, 0))
-    pygame.display.flip()  # Atualiza a tela do pygame
+# Usando for no lugar de while (iterações baseadas no número de transformações)
+while not finalizado:  # Enquanto não finalizar, continuar rodando
+    # processa fila
+    if not fila.empty():
+        item = fila.get()
 
-# Salva o resultado final
-salvar_resultado(resultado)
+        if item is None:
+            finalizado = True
+        else:
+            idx, j = item
+            imagem_parcial.reshape(-1, 3)[idx] = alvo.reshape(-1, 3)[j]
 
-# Fechar pygame ao finalizar
+    # converter para pygame
+    img_rgb = cv2.cvtColor(imagem_parcial, cv2.COLOR_BGR2RGB)
+
+    surface = pygame.surfarray.make_surface(img_rgb)
+
+    # zoom
+    surface = pygame.transform.scale(surface, (tamanho * zoom, tamanho * zoom))
+
+    screen.blit(surface, (0, 0))
+    pygame.display.flip()
+
+    # Adiciona o frame para o GIF, se necessário
+    frame = cv2.cvtColor(imagem_parcial, cv2.COLOR_BGR2RGB)
+    frames.append(frame)
+
+# final
 pygame.quit()
 
-print("Imagem gerada com sucesso: saida.png")
+# salvar a imagem (após fechar a janela do pygame)
+imagem_parcial_bgr = cv2.cvtColor(imagem_parcial, cv2.COLOR_RGB2BGR)
+
+cv2.imwrite("saida.png", imagem_parcial_bgr)
+
+print("Imagem salva com sucesso!")
+print("Processo concluído.")
